@@ -1,4 +1,3 @@
 [workspace]
 members = ["crates/lekalo-python-fastapi"]
-exclude = ["crates/lekalo-adapter-sdk-rust"]
 resolver = "2"
