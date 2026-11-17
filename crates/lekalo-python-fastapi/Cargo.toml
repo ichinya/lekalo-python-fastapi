@@ -8,7 +8,7 @@ repository = "https://github.com/ichinya/lekalo-python-fastapi"
 publish = false
 
 [dependencies]
-lekalo-adapter-sdk-rust = { git = "https://github.com/ichinya/lekalo-adapter-sdk", rev = "c07d2d5ab4df330cf414303a311563c734c15921" }
+lekalo-adapter-sdk-rust = { git = "https://github.com/ichinya/lekalo-adapter-sdk", rev = "92263c8e4cac9cbfbb38bdab44da71a41d001f20" }
 ruff_python_ast = "=0.0.22"
 ruff_python_parser = "=0.0.22"
 ruff_source_file = "=0.0.22"
