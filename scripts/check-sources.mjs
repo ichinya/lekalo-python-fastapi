@@ -5,7 +5,7 @@ import {readFileSync, readdirSync, lstatSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {join} from 'node:path';
 const root = fileURLToPath(new URL('..', import.meta.url));
-const locks = ["sdk-source.lock.json"];
+const locks = [];
 let count = 0;
 for (const name of locks) {
   const receipt = JSON.parse(readFileSync(join(root, name), 'utf8'));
@@ -27,3 +27,9 @@ for (const name of locks) {
   }
 }
 console.log(JSON.stringify({ok:true,files:count}));
+
+const sdkManifest = readFileSync(join(root, "crates/lekalo-python-fastapi/Cargo.toml"), 'utf8');
+const sdkLock = readFileSync(join(root,'Cargo.lock'),'utf8');
+const pin=sdkManifest.match(/lekalo-adapter-sdk-rust = \{ git = "https:\/\/github.com\/ichinya\/lekalo-adapter-sdk", rev = "([a-f0-9]{40})" \}/)?.[1];
+assert(pin,'SDK must be an immutable dependency on its owner repository');
+assert(sdkLock.includes(`git+https://github.com/ichinya/lekalo-adapter-sdk?rev=${pin}#${pin}`),'Cargo.lock SDK pin must match manifest');
