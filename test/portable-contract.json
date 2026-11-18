@@ -1,0 +1,6 @@
+{
+  "runtime": "gh/ichinya/lekalo-python#8350ed9e2d1216a0b63d2d4d0f6331cbc6ed4fb3",
+  "path": "main.py",
+  "valid": "from fastapi import FastAPI\napp = FastAPI()\n@app.get('/health')\ndef health(): pass",
+  "invalid": "from fastapi import FastAPI\napp = FastAPI()"
+}

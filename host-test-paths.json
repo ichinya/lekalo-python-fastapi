@@ -1,0 +1,4 @@
+[
+  "scripts/test-public-fastapi-scan.mjs",
+  "tests/fixtures/python-scan/fastapi"
+]
