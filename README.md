@@ -23,3 +23,7 @@ SDK подключён из `lekalo-adapter-sdk` по Git SHA и не храни
 `ci/package-workflow.yml` — неактивный шаблон CI. Для автоматического запуска его нужно установить в `.github/workflows/` учётными данными с правом `workflow`; текущая публикация проверена локально.
 
 The adapter SDK is supplied by an immutable Git dependency on [lekalo-adapter-sdk](https://github.com/ichinya/lekalo-adapter-sdk), recorded in Cargo.toml/Cargo.lock. There is no vendored SDK implementation in this repository.
+
+## Portable rules
+
+Select `gh/ichinya/lekalo-python-fastapi` in the component rules. The package supplies `contracts/http.json` for `http.routes/v1`. This opt-in check requires GET /health. The binding describes direct registrations in the listed entry files.
