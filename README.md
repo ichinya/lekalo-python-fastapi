@@ -20,7 +20,7 @@ LEKALO_PYTHON_ADAPTER_BIN=/absolute/path/to/lekalo-target-python node --test tes
 
 SDK подключён из `lekalo-adapter-sdk` по Git SHA и не хранится копией исходников. Python runtime включает provider как закреплённую библиотеку; динамическая загрузка сторонних providers остаётся отдельной задачей #2.
 
-`ci/package-workflow.yml` — неактивный шаблон CI. Для автоматического запуска его нужно установить в `.github/workflows/` учётными данными с правом `workflow`; текущая публикация проверена локально.
+GitHub Actions запускает [проверки пакета](.github/workflows/ci.yml) для pull request и изменений в `main`.
 
 The adapter SDK is supplied by an immutable Git dependency on [lekalo-adapter-sdk](https://github.com/ichinya/lekalo-adapter-sdk), recorded in Cargo.toml/Cargo.lock. There is no vendored SDK implementation in this repository.
 
