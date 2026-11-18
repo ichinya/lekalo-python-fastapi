@@ -1,0 +1,56 @@
+{
+  "schema": "lekalo/contract-rules/v1",
+  "requires": [
+    "http.routes/v1"
+  ],
+  "bindings": {
+    "python.decorated-object/v1": {
+      "capability": "http.routes/v1",
+      "fact": "routes",
+      "files": [
+        "main.py",
+        "app/main.py"
+      ],
+      "constructor": "fastapi.FastAPI",
+      "methods": {
+        "get": "GET",
+        "post": "POST",
+        "put": "PUT",
+        "patch": "PATCH",
+        "delete": "DELETE",
+        "options": "OPTIONS"
+      }
+    }
+  },
+  "checks": [
+    {
+      "id": "health-route",
+      "schema": {
+        "type": "object",
+        "required": [
+          "routes"
+        ],
+        "properties": {
+          "routes": {
+            "type": "array",
+            "contains": {
+              "type": "object",
+              "required": [
+                "method",
+                "path"
+              ],
+              "properties": {
+                "method": {
+                  "const": "GET"
+                },
+                "path": {
+                  "const": "/health"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}
