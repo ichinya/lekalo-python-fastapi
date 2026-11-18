@@ -5,6 +5,7 @@ on:
   pull_request:
   workflow_dispatch:
 env:
+  CARGO_INCREMENTAL: "0"
   CARGO_PROFILE_DEV_DEBUG: "0"
   CARGO_PROFILE_TEST_DEBUG: "0"
 permissions:
@@ -23,3 +24,10 @@ jobs:
           package-manager-cache: false
       - run: node scripts/check-sources.mjs
       - run: cargo test --locked
+  contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ichinya/lekalo/.github/actions/test-official-package@6f5387d98092d73f011003e62c3a59859b7271e8
+        with:
+          package: lekalo-python-fastapi
