@@ -27,3 +27,12 @@ The adapter SDK is supplied by an immutable Git dependency on [lekalo-adapter-sd
 ## Portable rules
 
 Select `gh/ichinya/lekalo-python-fastapi` in the component rules. The package supplies `contracts/http.json` for `http.routes/v1`. This opt-in check requires GET /health. The binding describes direct registrations in the listed entry files.
+
+## Observed route evidence
+
+`evidence/` is the data-only package for the `fastapi-http` observed
+family. Pin it in the project's `lekalo.evidence.json`. The payload keeps
+the method, path, native anchors, and registration provenance used by the
+public Python scanner. The adapter emits it in Target Protocol 1.4.0 when
+the host supplies the selected package pins. The runtime rules package at
+the repository root continues to expose portable contract checks.

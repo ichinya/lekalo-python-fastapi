@@ -1,5 +1,5 @@
 use lekalo_adapter_sdk::json::{strict_parse, Value};
-use lekalo_python_fastapi::{apply, Source, Symbol};
+use lekalo_python_fastapi::{apply, take_evidence_group, Source, Symbol};
 
 fn fixture(route: &str) -> (Source, Vec<Value>) {
     let source = Source {
@@ -36,6 +36,21 @@ fn attaches_route_only_to_admitted_handler() {
         routes[0].get("path").and_then(Value::as_str),
         Some("/items")
     );
+    let route = routes[0].clone();
+    let pins = strict_parse(r#"{"package_digest":"sha256:pack","schema_digest":"sha256:schema"}"#)
+        .unwrap();
+    let group = take_evidence_group(&mut entries, &pins, false).unwrap();
+    let facts = group.get("facts").and_then(Value::as_array).unwrap();
+    assert_eq!(facts.len(), 1);
+    assert_eq!(facts[0].get("payload"), Some(&route));
+    assert_eq!(
+        facts[0].get("subject").and_then(Value::as_str),
+        Some("items")
+    );
+    assert!(entries[0]
+        .get("evidence")
+        .and_then(|e| e.get("http_routes"))
+        .is_none());
 }
 
 #[test]

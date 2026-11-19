@@ -381,6 +381,61 @@ pub fn apply(sources: &[Source], entries: &mut [Value], policy: &str) -> Outcome
     }
 }
 
+/// Move the FastAPI route payloads into the generic evidence envelope.
+pub fn take_evidence_group(
+    entries: &mut [Value],
+    pins: &Value,
+    partial: bool,
+) -> Result<Value, &'static str> {
+    let mut facts = Vec::new();
+    for entry in entries {
+        let Some(Value::Object(evidence)) = get_mut(entry, "evidence") else {
+            continue;
+        };
+        let Some(i) = evidence.iter().position(|(name, _)| name == "http_routes") else {
+            continue;
+        };
+        let (_, Value::Array(routes)) = evidence.remove(i) else {
+            return Err("fastapi-route-shape");
+        };
+        for route in routes {
+            let member = |key| route.get(key).cloned().ok_or("fastapi-route-shape");
+            let application = member("application_native")?;
+            let key = signature(Value::Array(vec![
+                application.clone(),
+                member("method")?,
+                member("path")?,
+            ]));
+            facts.push(Value::Object(vec![
+                ("subject".into(), member("handler_native")?),
+                ("key".into(), Value::Str(key)),
+                (
+                    "references".into(),
+                    Value::Object(vec![("application".into(), application)]),
+                ),
+                ("sources".into(), member("sources")?),
+                ("payload".into(), route),
+            ]));
+        }
+    }
+    Ok(Value::Object(vec![
+        ("family".into(), Value::Str("fastapi-http".into())),
+        (
+            "package_digest".into(),
+            pins.get("package_digest").cloned().ok_or("evidence-pins")?,
+        ),
+        (
+            "schema_digest".into(),
+            pins.get("schema_digest").cloned().ok_or("evidence-pins")?,
+        ),
+        (
+            "coverage".into(),
+            Value::Str(if partial { "partial" } else { "complete" }.into()),
+        ),
+        ("facts".into(), Value::Array(facts)),
+    ]))
+}
+
 fn route_key(v: &Value) -> (Vec<String>, u64, String) {
     (
         [

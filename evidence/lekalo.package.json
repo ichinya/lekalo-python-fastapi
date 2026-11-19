@@ -1,0 +1,9 @@
+{
+  "schema": "lekalo/package/v1",
+  "id": "lekalo-python-fastapi",
+  "version": "0.2.0",
+  "kind": "evidence",
+  "files": [
+    "payload.schema.json"
+  ]
+}
