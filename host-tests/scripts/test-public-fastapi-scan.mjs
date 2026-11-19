@@ -10,6 +10,8 @@ import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 assert(process.argv.length === 2 || (process.argv.length === 3 && process.argv[2] === '--validate-contracts'));
 const contractMode = process.argv.includes('--validate-contracts');
+const evidencePackage = process.env.LEKALO_FASTAPI_EVIDENCE_PACKAGE;
+const schemas = process.env.LEKALO_TEST_CONTRACTS ?? join(resolve(dirname(fileURLToPath(import.meta.url)), '..'), 'contracts');
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const suffix = process.platform === 'win32' ? '.exe' : '';
 const binary = process.env.LEKALO_BIN ?? join(repo, `target/debug/lekalo${suffix}`);
@@ -29,7 +31,7 @@ function contracts(index) {
   assert.equal(require('ajv/package.json').version,'8.20.0');
   const Ajv = require('ajv/dist/2020.js').default;
   const ajv = new Ajv({strict:true,allErrors:true});
-  const schema = name => JSON.parse(readFileSync(join(repo,`contracts/${name}.json`),'utf8'));
+  const schema = name => JSON.parse(readFileSync(join(schemas,`${name}.json`),'utf8'));
   const currentIndex = ajv.compile(schema('observed-index.schema.v1.2.0'));
   assert(currentIndex(index),JSON.stringify(currentIndex.errors));
   const request = {protocol:'lekalo.target/v1',protocol_version:'1.2.0',operation:'scan',project_root:'.',target:'python',profile:profile.id,request_id:`req-${'0'.repeat(64)}`};
@@ -83,6 +85,47 @@ try {
   assert.deepEqual(readFileSync(indexPath),bytes,'legacy confirmation also refuses source drift without writing');
   writeFileSync(mainPath,main);
   cli(['bindings','confirm',proposed.proposal,'--project','.']); cli(['bindings','audit','--project','.']);
+  if (evidencePackage) {
+    const packageDir = join(root, 'fastapi-evidence');
+    cpSync(evidencePackage, packageDir, { recursive: true });
+    const digest = bytes => 'sha256:' + createHash('sha256').update(bytes).digest('hex');
+    const inventory = Object.fromEntries(['lekalo.package.json', 'payload.schema.json']
+      .map(file => [file, digest(readFileSync(join(packageDir, file)))]));
+    const pin = { source: 'path:fastapi-evidence', package_digest: digest(JSON.stringify(inventory)),
+      schema_digest: inventory['payload.schema.json'] };
+    const before = JSON.parse(readFileSync(indexPath));
+    const producerDigest = digest(readFileSync(adapter));
+    writeFileSync(join(root, 'lekalo.evidence.json'), JSON.stringify({
+      schema: 'lekalo/evidence-config/v1',
+      scans: [{ target: 'python', profile: 'standalone', producer: before.adapter,
+        program_digest: producerDigest, entry_digest: producerDigest,
+        http_projection: 'fastapi-http', families: { 'fastapi-http': pin } }],
+    }));
+    const confirmed = readFileSync(indexPath);
+    writeFileSync(mainPath, `${main}\napp.add_api_route(dynamic_path,list_items)\n`);
+    const refused = cli(['scan','--target','python','--profile','standalone','--project','.','--',adapter,
+      '--lekalo-project-profile-json',JSON.stringify(profile),'--lekalo-framework-policy-json',JSON.stringify(policy)],1);
+    assert(refused.diagnostics.some(d => d.data?.detail === 'evidence-http-migration-required'));
+    assert.deepEqual(readFileSync(indexPath), confirmed);
+    writeFileSync(mainPath, main);
+    scan();
+    const migrated = JSON.parse(readFileSync(indexPath));
+    assert.equal(migrated.schema_version, 'lekalo/observed-index/v1.3.0');
+    if (contractMode) {
+      const require = createRequire(process.env.LEKALO_AJV_NODE_PATH ? `${process.env.LEKALO_AJV_NODE_PATH}/` : import.meta.url);
+      const Ajv = require('ajv/dist/2020.js').default;
+      const schema = JSON.parse(readFileSync(join(schemas, 'observed-index.schema.v1.3.0.json'), 'utf8'));
+      const accepts = new Ajv({ strict: true, allErrors: true }).compile(schema);
+      assert(accepts(migrated), JSON.stringify(accepts.errors));
+    }
+    assert.deepEqual(migrated.endpoints, before.endpoints);
+    assert.equal(migrated.evidence_groups[0].coverage, 'complete');
+    assert.equal(migrated.evidence_groups[0].facts.length, before.endpoints.length);
+    const handler = migrated.symbols.find(s => s.id === 'shop.handlers.list_items');
+    assert.equal(handler.status, 'confirmed');
+    assert.equal(handler.state, 'current');
+    cli(['bindings','audit','--project','.']);
+  }
   cli(['validate','--strict','--project','.']);
   for (const command of [['observe','inspect'],['observe','impact'],['inspect'],['impact'],['context']]) cli([...command,'shop.handlers.list_items',...(command[0] === 'context' ? ['--budget','4000'] : []),'--project','.']);
   assert.deepEqual(inventory(join(root,'lekalo')),modelBefore); assert.deepEqual(inventory(join(root,'src')),sourceBefore);
@@ -114,7 +157,7 @@ try {
   writeFileSync(join(root,'src/shop/routes.py'),'from .handlers import list_items\n');
   scan(); cli(['bindings','audit','--project','.'],1);
   assert(!proposal(), 'a disappeared route has no generic function reconfirmation');
-  console.log(JSON.stringify({ ok:true, gate:'public-fastapi-scan', endpoints:cold.endpoints, canonicalPreserved:true, crossFileFreshness:true, staleConfirmationRefused:true, removedEndpointRefused:true, independentContracts:contractMode }));
+  console.log(JSON.stringify({ ok:true, gate:'public-fastapi-scan', endpoints:cold.endpoints, canonicalPreserved:true, crossFileFreshness:true, staleConfirmationRefused:true, removedEndpointRefused:true, independentContracts:contractMode, genericMigration:Boolean(evidencePackage) }));
 } finally {
   const checked=realpathSync(root); assert.equal(dirname(checked),parent); assert(basename(checked).startsWith('lekalo-public-fastapi-'));
   rmSync(checked,{recursive:true,force:true,maxRetries:3});
